@@ -3,7 +3,7 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { ContextView, Row } from '../types'
 
-const BAR = 60
+const BAR = 72
 const BAR_W = 1000
 const BAR_H = 8
 
@@ -27,6 +27,11 @@ const view = atom({ plugin: 'context-band', key: 'view' } as const, null, {
 })
 const isOpen = atom({ plugin: 'context-band', key: 'isOpen' } as const, false)
 const now = atom({ plugin: 'context-band', key: 'now' } as const, 0)
+const lastTurnEnd = atom({ plugin: 'context-band', key: 'lastTurnEnd' } as const, 0)
+
+// The prompt cache lifetime this tracks against; requests refresh it.
+const CACHE_TTL_MIN = 60
+const CACHE_WARN_MIN = 45
 
 function kilo(n: number): string {
   if (n >= 1_000_000) return `${+(n / 1_000_000).toFixed(1)}M`
@@ -98,6 +103,14 @@ function swatchSvg(color: string, isFree: boolean): string {
   )
 }
 
+function cacheLabel(isWorking: boolean, last: number, at: number): { text: string; color?: string } | null {
+  if (isWorking) return { text: 'cache warm' }
+  if (last === 0) return null
+  const min = (at - last) / 60_000
+  if (min >= CACHE_TTL_MIN) return { text: `cache cold, idle ${ago(at - last)}`, color: 'error' }
+  return { text: `cache idle ${ago(at - last)}`, color: min >= CACHE_WARN_MIN ? 'warning' : undefined }
+}
+
 function ago(ms: number): string {
   const m = Math.max(0, Math.floor(ms / 60_000))
   if (m < 1) return '<1m'
@@ -161,10 +174,20 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const result = await next(e)
     await measure($)
-    $.clock.every(60_000, async () => {
+    $.clock.every(15_000, async () => {
       const t = await $.clock.now()
       await update($, now, () => t)
     })
+
+    return result
+  })
+
+  on('turn.complete', async ($, e, next) => {
+    const result = await next(e)
+    if ((e as { agentId?: string }).agentId !== undefined) return result
+    const t = await $.clock.now()
+    await update($, lastTurnEnd, () => t)
+    await update($, now, () => t)
 
     return result
   })
@@ -188,6 +211,8 @@ export const register: Register = on => {
     const { Box, Text, Button } = ui
     const open = await read($, isOpen)
     const total = `${kilo(v.totalTokens)} / ${kilo(v.maxTokens)} (${v.percentage}%)`
+    const at = Math.max(await read($, now), v.measuredAt)
+    const cache = cacheLabel(e.props.isWorking, await read($, lastTurnEnd), at)
     const fold = (
       <Button
         key="fold"
@@ -200,7 +225,6 @@ export const register: Register = on => {
       const { Svg } = ui
       const rows = ordered(v)
       const colors = hexColors(rows)
-      const at = Math.max(await read($, now), v.measuredAt)
 
       return (
         <Box flexDirection="column" borderStyle="round" borderColor="subtle" paddingX="md" paddingY="xs" gap="xs">
@@ -208,9 +232,11 @@ export const register: Register = on => {
             <Box key="age" flexDirection="row" alignItems="center" gap="xs" flexGrow={1}>
               <Svg source={CLOCK_SVG} alt="Session age" width={18} height={18} />
               <Text>Context window</Text>
-              <Text dimColor>{`\u00b7 ${ago(at - v.startedAt)}`}</Text>
+              {cache !== null && (
+                <Text dimColor={cache.color === undefined} color={cache.color}>{`\u00b7 ${cache.text}`}</Text>
+              )}
               <Box display="none" hover={{ display: 'flex' }}>
-                <Text dimColor>{`(figures from ${ago(at - v.measuredAt)} ago)`}</Text>
+                <Text dimColor>{`(session ${ago(at - v.startedAt)} old)`}</Text>
               </Box>
             </Box>
             <Text dimColor>{total}</Text>
@@ -256,8 +282,11 @@ export const register: Register = on => {
     return (
       <Box flexDirection="column">
         <Box flexDirection="row" width={BAR}>
-          <Box flexGrow={1}>
+          <Box flexGrow={1} gap={1}>
             <Text bold>Context window</Text>
+            {cache !== null && (
+              <Text dimColor={cache.color === undefined} color={cache.color}>{cache.text}</Text>
+            )}
           </Box>
           <Text color={pctColor}>{total} </Text>
           {fold}

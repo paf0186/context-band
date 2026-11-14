@@ -1,6 +1,6 @@
 {
   "name": "context-band",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "description": "Shows the session's context window by category above the prompt: a coloured bar, folding out to the full table",
   "types": "./types/index.d.ts",
   "license": "MIT",

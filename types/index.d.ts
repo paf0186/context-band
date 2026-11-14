@@ -13,6 +13,6 @@ export type ContextView = {
 
 declare module 'claude-code' {
   interface PluginState {
-    'context-band': { view: Shaped<ContextView | null>; isOpen: boolean; now: number }
+    'context-band': { view: Shaped<ContextView | null>; isOpen: boolean; now: number; lastTurnEnd: number }
   }
 }
