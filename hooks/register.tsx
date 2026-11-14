@@ -112,8 +112,8 @@ function clockSvg(v: ContextView, at: number): string {
 
   return (
     '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">' +
-    `<title>${esc(title)}</title><rect width="18" height="18" fill="transparent"/>` +
-    '<g fill="none" stroke="#bbbbbb" stroke-width="1.6" stroke-linecap="round"><circle cx="9" cy="9" r="7.2"/><path d="M9 4.8V9l2.8 1.8"/></g></svg>'
+    '<g fill="none" stroke="#bbbbbb" stroke-width="1.6" stroke-linecap="round"><circle cx="9" cy="9" r="7.2"/><path d="M9 4.8V9l2.8 1.8"/></g>' +
+    `<rect width="18" height="18" fill="#000" fill-opacity="0"><title>${esc(title)}</title></rect></svg>`
   )
 }
 
