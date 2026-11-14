@@ -100,7 +100,7 @@ function swatchSvg(color: string, isFree: boolean): string {
 
 function ago(ms: number): string {
   const m = Math.max(0, Math.floor(ms / 60_000))
-  if (m < 1) return 'under a minute'
+  if (m < 1) return '<1m'
   if (m < 60) return `${m}m`
   const h = Math.floor(m / 60)
   if (h < 24) return `${h}h ${m % 60}m`
@@ -111,9 +111,6 @@ const CLOCK_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">' +
   '<g fill="none" stroke="#bbbbbb" stroke-width="1.6" stroke-linecap="round"><circle cx="9" cy="9" r="7.2"/><path d="M9 4.8V9l2.8 1.8"/></g></svg>'
 
-function ageLine(v: ContextView, at: number): string {
-  return `Session ${ago(at - v.startedAt)} old, figures from ${ago(at - v.measuredAt)} ago`
-}
 
 async function measure($: EngineInterface): Promise<void> {
   const usage = await $.session.usage({ breakdown: 'summary' })
@@ -211,17 +208,10 @@ export const register: Register = on => {
             <Box key="age" flexDirection="row" alignItems="center" gap="xs" flexGrow={1}>
               <Svg source={CLOCK_SVG} alt="Session age" width={18} height={18} />
               <Text>Context window</Text>
-              <Box
-                position="absolute"
-                top={0}
-                left={3}
-                display="none"
-                hover={{ display: 'flex' }}
-                backgroundColor="#262626"
-                paddingRight="sm"
-              >
-                <Text dimColor>{ageLine(v, at)}</Text>
-              </Box>
+              <Text dimColor>{`\u00b7 ${ago(at - v.startedAt)}`}</Text>
+              <Text color="transparent" hover={{ color: '#9b9b9b' }}>
+                {`(figures from ${ago(at - v.measuredAt)} ago)`}
+              </Text>
             </Box>
             <Text dimColor>{total}</Text>
             {fold}
