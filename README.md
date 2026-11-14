@@ -9,7 +9,7 @@ space and the deferred tool schemas).
 The desktop app's usage ring next to the model picker now shows plan usage, so
 the session's context is otherwise a click away. This puts it back on screen.
 
-- **Desktop:** a rounded card with the total, a clock showing the session's
+- **Desktop:** a rounded card with the total, a clock and title that show the session's
   age on hover, a bar whose segments show their
   name, tokens and share when hovered, and a chevron that folds the table out.
 - **Terminal:** the same bar and table drawn in text.

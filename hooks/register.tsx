@@ -107,14 +107,12 @@ function ago(ms: number): string {
   return `${Math.floor(h / 24)}d ${h % 24}h`
 }
 
-function clockSvg(v: ContextView, at: number): string {
-  const title = `Session age: ${ago(at - v.startedAt)}\nFigures updated ${ago(at - v.measuredAt)} ago`
+const CLOCK_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">' +
+  '<g fill="none" stroke="#bbbbbb" stroke-width="1.6" stroke-linecap="round"><circle cx="9" cy="9" r="7.2"/><path d="M9 4.8V9l2.8 1.8"/></g></svg>'
 
-  return (
-    '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">' +
-    '<g fill="none" stroke="#bbbbbb" stroke-width="1.6" stroke-linecap="round"><circle cx="9" cy="9" r="7.2"/><path d="M9 4.8V9l2.8 1.8"/></g>' +
-    `<rect width="18" height="18" fill="#000" fill-opacity="0"><title>${esc(title)}</title></rect></svg>`
-  )
+function ageLine(v: ContextView, at: number): string {
+  return `Session ${ago(at - v.startedAt)} old, figures from ${ago(at - v.measuredAt)} ago`
 }
 
 async function measure($: EngineInterface): Promise<void> {
@@ -210,9 +208,20 @@ export const register: Register = on => {
       return (
         <Box flexDirection="column" borderStyle="round" borderColor="subtle" paddingX="md" paddingY="xs" gap="xs">
           <Box flexDirection="row" alignItems="center" gap="xs">
-            <Svg source={clockSvg(v, at)} alt="Session age" width={18} height={18} isInteractive />
-            <Box flexGrow={1}>
+            <Box key="age" flexDirection="row" alignItems="center" gap="xs" flexGrow={1}>
+              <Svg source={CLOCK_SVG} alt="Session age" width={18} height={18} />
               <Text>Context window</Text>
+              <Box
+                position="absolute"
+                top={0}
+                left={3}
+                display="none"
+                hover={{ display: 'flex' }}
+                backgroundColor="#262626"
+                paddingRight="sm"
+              >
+                <Text dimColor>{ageLine(v, at)}</Text>
+              </Box>
             </Box>
             <Text dimColor>{total}</Text>
             {fold}
