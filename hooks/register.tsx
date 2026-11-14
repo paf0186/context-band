@@ -209,9 +209,9 @@ export const register: Register = on => {
               <Svg source={CLOCK_SVG} alt="Session age" width={18} height={18} />
               <Text>Context window</Text>
               <Text dimColor>{`\u00b7 ${ago(at - v.startedAt)}`}</Text>
-              <Text color="transparent" hover={{ color: '#9b9b9b' }}>
-                {`(figures from ${ago(at - v.measuredAt)} ago)`}
-              </Text>
+              <Box display="none" hover={{ display: 'flex' }}>
+                <Text dimColor>{`(figures from ${ago(at - v.measuredAt)} ago)`}</Text>
+              </Box>
             </Box>
             <Text dimColor>{total}</Text>
             {fold}
