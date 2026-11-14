@@ -7,10 +7,12 @@ export type ContextView = {
   maxTokens: number
   percentage: number
   rows: Row[]
+  startedAt: number
+  measuredAt: number
 }
 
 declare module 'claude-code' {
   interface PluginState {
-    'context-band': { view: Shaped<ContextView | null>; isOpen: boolean }
+    'context-band': { view: Shaped<ContextView | null>; isOpen: boolean; now: number }
   }
 }

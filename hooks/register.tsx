@@ -23,9 +23,10 @@ const FREE = '#2a2a2a'
 const TRACK = '#2e2e2e'
 
 const view = atom({ plugin: 'context-band', key: 'view' } as const, null, {
-  shape: 'view-2',
+  shape: 'view-3',
 })
 const isOpen = atom({ plugin: 'context-band', key: 'isOpen' } as const, false)
+const now = atom({ plugin: 'context-band', key: 'now' } as const, 0)
 
 function kilo(n: number): string {
   if (n >= 1_000_000) return `${+(n / 1_000_000).toFixed(1)}M`
@@ -97,12 +98,28 @@ function swatchSvg(color: string, isFree: boolean): string {
   )
 }
 
-const CLOCK_SVG =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">' +
-  '<g fill="none" stroke="#bbbbbb" stroke-width="1.6" stroke-linecap="round"><circle cx="9" cy="9" r="7.2"/><path d="M9 4.8V9l2.8 1.8"/></g></svg>'
+function ago(ms: number): string {
+  const m = Math.max(0, Math.floor(ms / 60_000))
+  if (m < 1) return 'under a minute'
+  if (m < 60) return `${m}m`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ${m % 60}m`
+  return `${Math.floor(h / 24)}d ${h % 24}h`
+}
+
+function clockSvg(v: ContextView, at: number): string {
+  const title = `Session age: ${ago(at - v.startedAt)}\nFigures updated ${ago(at - v.measuredAt)} ago`
+
+  return (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">' +
+    `<title>${esc(title)}</title><rect width="18" height="18" fill="transparent"/>` +
+    '<g fill="none" stroke="#bbbbbb" stroke-width="1.6" stroke-linecap="round"><circle cx="9" cy="9" r="7.2"/><path d="M9 4.8V9l2.8 1.8"/></g></svg>'
+  )
+}
 
 async function measure($: EngineInterface): Promise<void> {
-  const b = (await $.session.usage({ breakdown: 'summary' })).context.breakdown
+  const usage = await $.session.usage({ breakdown: 'summary' })
+  const b = usage.context.breakdown
 
   if (b === undefined) {
     return
@@ -119,8 +136,11 @@ async function measure($: EngineInterface): Promise<void> {
     maxTokens: b.rawMaxTokens,
     percentage: b.percentage,
     rows,
+    startedAt: usage.startedAt,
+    measuredAt: await $.clock.now(),
   }
   await update($, view, () => value)
+  await update($, now, () => value.measuredAt)
 }
 
 function textBar(v: ContextView): { color: string; text: string }[] {
@@ -146,6 +166,10 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const result = await next(e)
     await measure($)
+    $.clock.every(60_000, async () => {
+      const t = await $.clock.now()
+      await update($, now, () => t)
+    })
 
     return result
   })
@@ -181,11 +205,12 @@ export const register: Register = on => {
       const { Svg } = ui
       const rows = ordered(v)
       const colors = hexColors(rows)
+      const at = Math.max(await read($, now), v.measuredAt)
 
       return (
         <Box flexDirection="column" borderStyle="round" borderColor="subtle" paddingX="md" paddingY="xs" gap="xs">
           <Box flexDirection="row" alignItems="center" gap="xs">
-            <Svg source={CLOCK_SVG} alt="Context" width={18} height={18} />
+            <Svg source={clockSvg(v, at)} alt="Session age" width={18} height={18} isInteractive />
             <Box flexGrow={1}>
               <Text>Context window</Text>
             </Box>
